@@ -53,3 +53,29 @@ test('late process callbacks cannot update a closed chat', () => {
     app._read(1); app.close();
     callback({read_line_finish_utf8(){throw new Error('stale read');}},{});
 });
+
+const controllerSource = readFileSync(new URL('../../gnome-extension/src/controller.js', import.meta.url), 'utf8');
+function controllerMethod(name, next) {
+    const start = controllerSource.indexOf(`    ${name}(`);
+    const end = controllerSource.indexOf(`    ${next}(`, start);
+    // Evaluate the actual method together with the comment before the next method.
+    return vm.runInNewContext(`({${controllerSource.slice(start, end)}})`)[name];
+}
+test('automatic collapse cannot cancel a user-requested screen capture', () => {
+    const collapse = controllerMethod('_collapseUnlessHeld', '_openFromClosed');
+    let closed = false;
+    const controller = {_localAsk:{_capturing:true}, collapse(){closed=true;}};
+    collapse.call(controller);
+    assert.equal(closed, false);
+    controller._localAsk._capturing=false;
+    controller._shelfHelper={containsPointer(){return false;}};
+    collapse.call(controller);
+    assert.equal(closed, true);
+});
+test('closing embedded chat tells the island to return to its compact shape', () => {
+    const {app} = setup(); let hidden = false;
+    app._dialog.close=()=>{hidden=true;};
+    app.close();
+    assert.equal(hidden,true);
+    assert.equal(app._generation,2);
+});

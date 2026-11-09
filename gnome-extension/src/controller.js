@@ -1380,7 +1380,7 @@ export class Controller {
     _render() {
         if (this._destroying)
             return;
-        const presentation = this._voiceOpen ? 'voice'
+        const presentation = this._localOpen ? 'local' : this._voiceOpen ? 'voice'
             : this._expandWanted ? 'expanded' : this._alert ? 'peek' : 'compact';
         this._presentation = presentation;
         // Alerts, the open island and the assistant are never auto-hidden; the resting island waits again.
@@ -1424,6 +1424,17 @@ export class Controller {
                 shoulder: gap === null ? EXPANDED_SHOULDER * scale : 0,
             };
             view = this._expanded;
+            break;
+        }
+        case 'local': {
+            const inset = gap ?? (this._blendsIn ? top : PEEK_TOP_GLASS * scale);
+            const monitor = this._monitor ?? Main.layoutManager.primaryMonitor;
+            const height = Math.min(440 * scale, monitor.height - inset - 48 * scale);
+            size = {width: Math.min(480 * scale, monitor.width - 32 * scale),
+                height: inset + height, radius: 30 * scale,
+                shoulder: gap === null ? PEEK_SHOULDER * scale : 0};
+            view = this._localAsk.actor;
+            view.style = `padding-top: ${inset / scale}px;`;
             break;
         }
         case 'voice': {
@@ -1709,6 +1720,8 @@ export class Controller {
         if (!this._island.hovered && unmoved && !this._expandWanted)
             return;
         this._syncClose();
+        if (this._localOpen)
+            return;
         // An answer stays while the pointer is on it, and as long again once it leaves. Peeked at by hovering
         // while it works, it goes back to the background as the pointer leaves.
         if (this._voiceOpen) {
@@ -1847,6 +1860,8 @@ export class Controller {
 
     /** Closes, unless the pointer is on the shelf helper's window over the island. */
     _collapseUnlessHeld() {
+        if (this._localAsk?._capturing)
+            return;
         // The shelf helper window covers the island; the pointer may be on it.
         if (this._shelfHelper.containsPointer()) {
             this._later('collapse', COLLAPSE_DELAY_MS, () => this._collapseUnlessHeld());
@@ -1964,6 +1979,8 @@ export class Controller {
         if (!this._shelfHelper.containsPointer() &&
             !this._island.contains(global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, ...event.get_coords())))
             return Clutter.EVENT_STOP;
+        if (this._localOpen)
+            return Clutter.EVENT_PROPAGATE;
         // A click puts an answer away; the face and the Sign in button take their own clicks.
         if (this._voiceOpen) {
             // Peeked at by hovering while it works, a click keeps it open, Esc putting it back.
@@ -2014,6 +2031,8 @@ export class Controller {
         // A close still pending (the pointer just left) would shut it again.
         this._cancel('expand');
         this._cancel('collapse');
+        if (this._localOpen)
+            this._localAsk.close();
         const target = pageName ?? this._alertPage ?? this._defaultPage();
         if (target)
             this._expanded.showPage(target, {animate: this._expandWanted});
@@ -2034,6 +2053,10 @@ export class Controller {
         if (this._destroying)
             return;
         this._cancel('collapse');
+        if (this._localOpen || this._localAsk?._capturing) {
+            this._localAsk.close();
+            return;
+        }
         this._setKeyboard(false);
         // Once closed and settled, what changed meanwhile is laid out for next time (see `_warmUp`); the
         // alert and voice views keep their layout, unless the theme changed.
@@ -2527,15 +2550,40 @@ export class Controller {
     // The shortcut (or the face) opens the assistant listening; while listening it finishes,
     // and once answered it listens again for a follow-up.
     _openLocalAsk() {
-        if (!this._island)
+        if (!this._island?.visible)
             return;
+        if (this._localOpen) {
+            this.collapse();
+            return;
+        }
         this.collapse();
         Main.overview.hide();
-        this._localAsk ??= new LocalAsk(this._extension);
+        if (!this._localAsk) {
+            this._localAsk = new LocalAsk(this._extension, {
+                show: () => {
+                    if (this._destroying)
+                        return;
+                    this._localOpen = true;
+                    this._cancel('expand');
+                    this._cancel('collapse');
+                    this._render();
+                    this._holdOpen();
+                    this._localAsk.focus();
+                },
+                hide: () => {
+                    this._localOpen = false;
+                    this._setKeyboard(false);
+                    this._render();
+                },
+            });
+            this._island.addView(this._localAsk.actor);
+        }
         this._localAsk.open();
     }
 
     _onVoiceKey() {
+        if (this._localOpen)
+            this._localAsk.close();
         // Hidden by a fullscreen window: it would listen unseen.
         if (!this._island.visible)
             return;

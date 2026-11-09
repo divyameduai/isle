@@ -2,7 +2,7 @@
 
 A local extension of Isle 1.7.1: open the island and choose **Ask locally**, or press **Ctrl+Alt+I**. The shortcut can be changed in Isle Settings → Assistant → Local Gemma.
 
-Type a question and press Enter. Responses stream into the panel. **Attach screen** takes one image of the current monitor after hiding the panel. A preview appears; the image reaches the model only after **Send**. **Remove image** discards an unsent image. Follow-up questions share the conversation, including an attached image, until the context resets. **Close & clear** and **Escape** terminate the model process and clear the conversation. **New chat / Stop** cancels work and reloads the model for a fresh chat.
+The chat expands inside the island itself, with a compact Ask Isle header, rounded composer and monochrome message styling. There is no separate dialog or dimmed desktop. Type a question and press Enter. Responses stream into the panel. **Screen** takes one image of the current monitor after hiding the panel. A preview appears; the image reaches the model only after **↑ (Send)**. **Remove** discards an unsent image. Follow-up questions share the conversation, including an attached image, until the context resets. **× (Close and clear)** and **Escape** terminate the model process and clear the conversation. **↺ (New chat / Stop)** cancels work and reloads the model for a fresh chat.
 
 ## Implementation
 

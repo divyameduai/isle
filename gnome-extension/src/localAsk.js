@@ -6,56 +6,67 @@ import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 import 'resource:///org/gnome/shell/ui/screenshot.js';
 import {VERTICAL} from './compat.js';
 
 export class LocalAsk {
-    constructor(extension) {
+    constructor(extension, host) {
         this._extension = extension;
         this._generation = 0;
-        this._dialog = new ModalDialog.ModalDialog({styleClass: 'isle-local-dialog', destroyOnClose: false,
-            shouldFadeIn: false, shouldFadeOut: false});
-        this._dialog.dialogLayout.y_align = Clutter.ActorAlign.START;
-        this._dialog.dialogLayout.set_style('margin-top: 40px;');
-        const body = this._dialog.contentLayout;
-        body.add_child(new St.Label({text: 'Ask locally', style_class: 'isle-local-title'}));
-        this._status = new St.Label({text: 'Gemma 4 · Offline · No saved chat', style_class: 'isle-local-status'});
+        this.actor = new St.BoxLayout({...VERTICAL, style_class: 'isle-local-view', x_expand: true});
+        // The host uses Isle's existing shape, animation and keyboard grab.
+        this._dialog = {open: () => host.show(), close: () => host.hide(), destroy: () => {}};
+        this._host = host;
+        const body = new St.BoxLayout({...VERTICAL, style_class: 'isle-local-body', x_expand: true, y_expand: true});
+        this.actor.add_child(body);
+        const header = new St.BoxLayout({style_class: 'isle-local-header'});
+        header.add_child(new St.Label({text: '✦', style_class: 'isle-local-spark', y_align: Clutter.ActorAlign.CENTER}));
+        const heading = new St.BoxLayout({...VERTICAL, x_expand: true});
+        heading.add_child(new St.Label({text: 'Ask Isle', style_class: 'isle-local-title'}));
+        this._status = new St.Label({text: 'On your device', style_class: 'isle-local-status'});
         this._status.clutter_text.line_wrap = true;
-        body.add_child(this._status);
-        const scroll = new St.ScrollView({style_class: 'isle-local-scroll', x_expand: true});
+        heading.add_child(this._status);
+        header.add_child(heading);
+        header.add_child(this._button('↺', () => this._reset(), 'New chat or stop response'));
+        header.add_child(this._button('×', () => this.close(), 'Close and clear chat'));
+        body.add_child(header);
+        const scroll = new St.ScrollView({style_class: 'isle-local-scroll', x_expand: true, y_expand: true});
         this._messages = new St.BoxLayout({...VERTICAL, style_class: 'isle-local-messages', x_expand: true});
         scroll.set_child(this._messages);
         body.add_child(scroll);
         this._scroll = scroll;
-        this._add('Isle', 'Ask a question, or attach a screen image and ask about what you see. Nothing is captured until you press Attach screen.');
-        this._preview = new St.Icon({icon_size: 80, visible: false, accessible_name: 'Attached screen preview'});
-        body.add_child(this._preview);
-        const attachmentRow = new St.BoxLayout({style_class: 'isle-local-row'});
-        this._captureButton = this._button('Attach screen', () => this._capture());
-        this._removeButton = this._button('Remove image', () => this._removeImage());
+        this._welcome();
+        const attachmentRow = new St.BoxLayout({style_class: 'isle-local-row', y_align: Clutter.ActorAlign.CENTER});
+        this._preview = new St.Icon({icon_size: 44, visible: false, accessible_name: 'Attached screen preview'});
+        attachmentRow.add_child(this._preview);
+        this._captureButton = this._button('⊕  Screen', () => this._capture(), 'Attach one screen image');
+        this._removeButton = this._button('Remove', () => this._removeImage(), 'Remove attached screen');
         this._removeButton.hide();
         attachmentRow.add_child(this._captureButton);
         attachmentRow.add_child(this._removeButton);
         body.add_child(attachmentRow);
-        this._entry = new St.Entry({hint_text: 'Ask Gemma…', can_focus: true, x_expand: true,
+        const composer = new St.BoxLayout({style_class: 'isle-local-composer'});
+        this._entry = new St.Entry({hint_text: 'Ask anything…', can_focus: true, x_expand: true,
             style_class: 'isle-local-entry'});
         this._entry.clutter_text.connect('activate', () => this._send());
-        body.add_child(this._entry);
-        this._dialog.setInitialKeyFocus(this._entry);
-        this._dialog.setButtons([
-            {label: 'Close & clear', action: () => this.close(), key: Clutter.KEY_Escape},
-            {label: 'New chat / Stop', action: () => this._reset()},
-            {label: 'Send', action: () => this._send(), default: true},
-        ]);
+        composer.add_child(this._entry);
+        const send = this._button('↑', () => this._send(), 'Send question');
+        send.add_style_class_name('isle-local-send');
+        composer.add_child(send);
+        body.add_child(composer);
+        body.add_child(new St.Label({text: 'On-device · Screen shared only when attached', style_class: 'isle-local-footnote'}));
     }
-    _button(label, action) {
-        const button = new St.Button({label, can_focus: true, style_class: 'isle-local-button'});
+    _welcome() {
+        this._add('Isle', 'A little help, right here.\nAsk a question or add your screen.');
+    }
+    focus() { this._entry.grab_key_focus(); }
+    _button(label, action, accessibleName = label) {
+        const button = new St.Button({label, accessible_name: accessibleName, can_focus: true, style_class: 'isle-local-button'});
         button.connect('clicked', action);
         return button;
     }
     _add(who, text) {
-        const label = new St.Label({text: `${who}\n${text}`, style_class: 'isle-local-message', x_expand: true});
+        const label = new St.Label({text: text, style_class: `isle-local-message ${who === 'You' ? 'isle-local-user' : 'isle-local-answer'}`, x_expand: true});
         label.clutter_text.line_wrap = true;
         label.clutter_text.ellipsize = 0;
         label.clutter_text.set_selectable(true);
@@ -69,6 +80,8 @@ export class LocalAsk {
         return label;
     }
     open() {
+        if (!this._messages.get_n_children())
+            this._welcome();
         this._dialog.open();
         this._start();
     }
@@ -89,7 +102,7 @@ export class LocalAsk {
             this._process = spawn.spawnv([launcher]);
             this._input = this._process.get_stdin_pipe();
             this._output = new Gio.DataInputStream({base_stream: this._process.get_stdout_pipe()});
-            this._status.text = 'Loading Gemma 4 locally…';
+            this._status.text = 'Waking up…';
             const generation = ++this._generation;
             this._read(generation);
         } catch (_error) {
@@ -124,18 +137,18 @@ export class LocalAsk {
     _event(event) {
         if (event.event === 'ready') {
             this._ready = true;
-            this._status.text = 'Gemma 4 · Network blocked · Ready';
+            this._status.text = 'On your device · Ready';
         } else if (event.event === 'loading') {
-            this._status.text = 'Loading Gemma 4 locally…';
+            this._status.text = 'Waking up…';
         } else if (event.event === 'delta') {
             this._draftText = (this._draftText ?? '') + event.text;
             this._draftLabel ??= this._add('Gemma', '');
-            this._draftLabel.text = `Gemma\n${this._draftText}`;
+            this._draftLabel.text = this._draftText;
         } else if (event.event === 'answer') {
             this._busy = false;
-            this._status.text = 'Gemma 4 · Network blocked · Ready';
+            this._status.text = 'On your device · Ready';
             if (this._draftLabel)
-                this._draftLabel.text = `Gemma\n${event.text}`;
+                this._draftLabel.text = event.text;
             else
                 this._add('Gemma', event.text);
             this._draftLabel = null;
@@ -158,7 +171,7 @@ export class LocalAsk {
             return;
         }
         this._busy = true;
-        this._status.text = 'Thinking on this computer…';
+        this._status.text = 'Thinking…';
         this._lastError = null;
         this._draftLabel = null;
         this._draftText = '';
@@ -186,7 +199,7 @@ export class LocalAsk {
         const monitor = Main.layoutManager.currentMonitor;
         this._dialog.close();
         // Let the island and chat disappear before capturing the chosen monitor.
-        this._captureTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+        this._captureTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
             this._captureTimer = 0;
             this._takeScreen(monitor, generation);
             return GLib.SOURCE_REMOVE;
@@ -219,10 +232,13 @@ export class LocalAsk {
         }
     }
     _removeImage() {
+        const hadImage = Boolean(this._image);
         this._image = null;
         this._preview.gicon = null;
         this._preview.hide();
         this._removeButton.hide();
+        if (hadImage && !this._busy && !this._capturing && this._ready)
+            this._status.text = 'On your device · Ready';
     }
     _kill() {
         ++this._generation;
@@ -243,6 +259,7 @@ export class LocalAsk {
         this._kill();
         this._removeImage();
         this._messages.destroy_all_children();
+        this._welcome();
         this._entry.text = '';
         this._lastError = null;
         this._start();

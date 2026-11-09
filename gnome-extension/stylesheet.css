@@ -1655,16 +1655,25 @@
 #isleIsland.isle-glass-dark .isle-cal-world-toggle:checked,
 #isleIsland.isle-glass-dark .isle-dnd-toggle:checked { box-shadow: none; }
 
-/* Local Gemma chat: native GNOME controls, no webview. */
-.isle-local-launch { padding: 5px 10px; border-radius: 12px; background: #243b32; color: #a9eac8; font-size: 12px; }
-.isle-local-launch:hover { background: #355445; }
-.isle-local-dialog { width: 540px; border-radius: 24px; background: #171b20; color: #f2f4f7; }
-.isle-local-title { font-size: 22px; font-weight: bold; }
-.isle-local-status { color: #a9eac8; font-size: 12px; }
-.isle-local-scroll { height: 220px; }
-.isle-local-messages { spacing: 12px; }
-.isle-local-message { padding: 12px; border-radius: 12px; background: #232930; font-size: 14px; }
-.isle-local-row { spacing: 10px; }
-.isle-local-button { padding: 8px 12px; border-radius: 10px; background: #303943; }
-.isle-local-button:hover { background: #414d59; }
-.isle-local-entry { padding: 12px; border-radius: 12px; background: #232930; color: white; }
+/* Local chat lives inside the island's animated shape. */
+.isle-local-launch { padding: 4px 10px; border-radius: 14px; background-color: rgba(255,255,255,0.09); color: #e6e7eb; font-size: 11px; }
+.isle-local-launch:hover { background-color: rgba(255,255,255,0.17); }
+.isle-local-body { padding: 18px 22px 16px; spacing: 12px; color: #f5f5f7; }
+.isle-local-header { spacing: 12px; }
+.isle-local-spark { font-size: 27px; color: #c6bbff; }
+.isle-local-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.isle-local-status { color: #a1a1aa; font-size: 11px; }
+.isle-local-scroll { min-height: 100px; }
+.isle-local-messages { spacing: 12px; padding: 8px 0; }
+.isle-local-message { padding: 12px 14px; border-radius: 18px; font-size: 14px; color: #f5f5f7; }
+.isle-local-user { background-color: rgba(255,255,255,0.10); margin-left: 40px; }
+.isle-local-answer { background-color: transparent; padding-left: 2px; padding-right: 18px; }
+.isle-local-row { spacing: 8px; }
+.isle-local-button { padding: 7px 11px; border-radius: 16px; background-color: rgba(255,255,255,0.07); color: #d5d5dc; font-size: 12px; }
+.isle-local-button:hover, .isle-local-button:focus { background-color: rgba(255,255,255,0.17); color: white; }
+.isle-local-composer { spacing: 8px; padding: 6px; border: 1px solid rgba(255,255,255,0.14); border-radius: 24px; background-color: rgba(255,255,255,0.06); }
+.isle-local-entry { padding: 7px 10px; border: none; border-radius: 18px; background-color: transparent; color: #f5f5f7; font-size: 14px; selection-background-color: #655b91; caret-color: white; }
+.isle-local-entry:focus { box-shadow: none; border: none; }
+.isle-local-send { background-color: #f5f5f7; color: #151517; font-size: 20px; font-weight: bold; padding: 3px 12px; }
+.isle-local-send:hover, .isle-local-send:focus { background-color: #d7ccff; color: #151517; }
+.isle-local-footnote { color: #83838e; font-size: 10px; text-align: center; }
