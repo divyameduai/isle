@@ -160,6 +160,10 @@ export default class IslePreferences extends ExtensionPreferences {
     // The assistant: which AI and model, speech, the conversation, and its look.
     _voicePage(settings, window) {
         const page = new Adw.PreferencesPage({title: 'Assistant', icon_name: 'audio-input-microphone-symbolic'});
+        const localGroup = new Adw.PreferencesGroup({title: 'Local Gemma',
+            description: 'Ask locally in the island. Runs on this computer with network access blocked. Attach screen takes one image; Close & clear discards the chat.'});
+        localGroup.add(shortcutRow(settings, 'local-ai-shortcut', 'Local chat shortcut', 'Opens offline Gemma chat'));
+        page.add(localGroup);
         const installed = AI_PROVIDERS.filter(provider => findProgram(provider.command));
         const group = new Adw.PreferencesGroup({
             title: 'Voice Assistant',

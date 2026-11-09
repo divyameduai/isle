@@ -2,3 +2,7 @@
 gnome-extension/schemas/gschemas.compiled
 /dist
 /node_modules
+
+/local-ai/target/
+
+__pycache__/

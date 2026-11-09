@@ -81,6 +81,7 @@ export const ExpandedView = GObject.registerClass({
         'tint-motion': {param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE]},
         // The mic button: open the voice assistant.
         'voice-requested': {},
+        'local-ask-requested': {},
         // The gear by the clock: Isle's settings.
         'settings-requested': {},
     },
@@ -192,6 +193,10 @@ export const ExpandedView = GObject.registerClass({
         this._micButton = iconButton('isle-sparkle-symbolic', 'isle-button-flat isle-header-mic',
             () => this.emit('voice-requested'), {size: 15, accessibleName: 'AI assistant'});
         status.add_child(this._micButton);
+        const local = new St.Button({label: 'Ask locally', can_focus: true,
+            style_class: 'isle-local-launch', accessible_name: 'Ask Gemma locally, with optional screen image'});
+        local.connect('clicked', () => this.emit('local-ask-requested'));
+        status.add_child(local);
 
         const clock = new St.BoxLayout({y_align: Clutter.ActorAlign.CENTER, style_class: 'isle-header-clock'});
         this._headerRing = new Ring({size: 15, lineWidth: 2.5});

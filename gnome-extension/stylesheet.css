@@ -1654,3 +1654,17 @@
 #isleIsland.isle-glass-dark .isle-mode-toggle.on,
 #isleIsland.isle-glass-dark .isle-cal-world-toggle:checked,
 #isleIsland.isle-glass-dark .isle-dnd-toggle:checked { box-shadow: none; }
+
+/* Local Gemma chat: native GNOME controls, no webview. */
+.isle-local-launch { padding: 5px 10px; border-radius: 12px; background: #243b32; color: #a9eac8; font-size: 12px; }
+.isle-local-launch:hover { background: #355445; }
+.isle-local-dialog { width: 540px; border-radius: 24px; background: #171b20; color: #f2f4f7; }
+.isle-local-title { font-size: 22px; font-weight: bold; }
+.isle-local-status { color: #a9eac8; font-size: 12px; }
+.isle-local-scroll { height: 220px; }
+.isle-local-messages { spacing: 12px; }
+.isle-local-message { padding: 12px; border-radius: 12px; background: #232930; font-size: 14px; }
+.isle-local-row { spacing: 10px; }
+.isle-local-button { padding: 8px 12px; border-radius: 10px; background: #303943; }
+.isle-local-button:hover { background: #414d59; }
+.isle-local-entry { padding: 12px; border-radius: 12px; background: #232930; color: white; }

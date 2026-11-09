@@ -24,6 +24,7 @@ import {HAS_ACCENT, grabsKeyboard, inhibitScanout, isWayland, onUiScale, px, uiS
 import {Daemon} from './daemon.js';
 import {BOTTOM_PADDING, ExpandedView, PAGE_HEIGHT} from './expanded.js';
 import {Island} from './island.js';
+import {LocalAsk} from './localAsk.js';
 import {MirrorIsland} from './mirror.js';
 import {AudioOutputs} from './audio.js';
 import {CallMonitor} from './call.js';
@@ -333,6 +334,9 @@ export class Controller {
 
     /** The last step: hooks the island to GNOME and isled, then lets isled's held changes through. */
     _connectAll() {
+        Main.wm.addKeybinding('local-ai-shortcut', this._settings, Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+            Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
+            () => this._openLocalAsk());
         this._primaryChanged = global.display.get_selection().connect('owner-changed', (_selection, type) => {
             if (type === Meta.SelectionType.SELECTION_PRIMARY)
                 this._selectedIn = global.display.focus_window;
@@ -465,6 +469,7 @@ export class Controller {
                 this._island.setTintMotion(time, level);
         });
         // A request still at work shows its progress, as from the closed island; a new one would be lost.
+        expanded.connect('local-ask-requested', () => this._openLocalAsk());
         expanded.connect('voice-requested', () => this._voiceWorking ? this._reopenVoice() : this._openVoice({typing: true}));
         // Settings open in their own window; the island gets out of its way.
         expanded.connect('settings-requested', () => {
@@ -2521,6 +2526,15 @@ export class Controller {
 
     // The shortcut (or the face) opens the assistant listening; while listening it finishes,
     // and once answered it listens again for a follow-up.
+    _openLocalAsk() {
+        if (!this._island)
+            return;
+        this.collapse();
+        Main.overview.hide();
+        this._localAsk ??= new LocalAsk(this._extension);
+        this._localAsk.open();
+    }
+
     _onVoiceKey() {
         // Hidden by a fullscreen window: it would listen unseen.
         if (!this._island.visible)
@@ -3175,6 +3189,9 @@ export class Controller {
 
     /** Turns Isle off: agents' asks go back to their terminals, then all it built is torn down. */
     destroy() {
+        Main.wm.removeKeybinding('local-ai-shortcut');
+        this._localAsk?.destroy();
+        this._localAsk = null;
         // Failed to start: what it built went then.
         if (this._failed)
             return;
